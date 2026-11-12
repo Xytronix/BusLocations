@@ -1,7 +1,7 @@
 ﻿{
   "Name": "Bus Locations",
   "Author": "nanzington",
-  "Version": "1.3",
+  "Version": "1.3.1",
   "Description": "A framework that lets modders dynamically add new locations for the bus to go to.",
   "UniqueID": "hootless.BusLocations",
   "EntryDll": "BusLocations.dll",

@@ -20,7 +20,6 @@ namespace BusLocations
         /// <summary>The available bus choices.</summary>
         private Response[] Choices;
 
-
         /*********
         ** Public methods
         *********/
@@ -29,6 +28,7 @@ namespace BusLocations
         public override void Entry(IModHelper helper)
         {
             helper.Events.Input.ButtonPressed += OnButtonPressed;
+
 
             // get content packs
             IList<BusLoc> locations = new List<BusLoc>();
@@ -48,6 +48,7 @@ namespace BusLocations
             }
             choices.Add(new Response("Cancel", "Cancel"));
             this.Choices = choices.ToArray();
+
         }
 
 
@@ -59,8 +60,10 @@ namespace BusLocations
         /// <param name="e">The event data.</param>
         private void OnButtonPressed(object sender, ButtonPressedEventArgs e)
         {
-
             if (!Context.IsWorldReady)
+                return;
+
+            if (Game1.player.hasMenuOpen)
                 return;
 
             if (Constants.TargetPlatform == GamePlatform.Android)
@@ -76,15 +79,16 @@ namespace BusLocations
             if (!Game1.currentLocation.Name.Contains("BusStop"))
                 return;
 
-        /// this action no longer exists as of 03/21/2017
-        /// if (Game1.currentLocation.doesTileHaveProperty(17, 11, "Action", "Buildings") != "BusTicket")
-        ///     return;
+            /// this action no longer exists as of 03/21/2017
+            /// if (Game1.currentLocation.doesTileHaveProperty(17, 11, "Action", "Buildings") != "BusTicket")
+            ///     return;
 
-        /// for some reason the Ticket Machine extends all the way down to Tile 12 so let's add it here.
-            if (!(e.Cursor.GrabTile.X == 17 && (e.Cursor.GrabTile.Y == 12 || e.Cursor.GrabTile.Y == 11 || e.Cursor.GrabTile.Y == 10)))
+            /// for some reason the Ticket Machine extends all the way down to Tile 12 so let's add it here.
+            if (!(e.Cursor.GrabTile.X == 17 && (e.Cursor.GrabTile.Y == 12 || e.Cursor.GrabTile.Y == 11 || e.Cursor.GrabTile.Y == 10) && Game1.player.canMove))
                 return;
 
             this.Helper.Input.Suppress(e.Button);
+
             if (Game1.MasterPlayer.mailReceived.Contains("ccVault"))
                 Game1.currentLocation.createQuestionDialogue("Where would you like to go?", Choices, DialogueAction);
             else
@@ -100,20 +104,29 @@ namespace BusLocations
                 return;
             int index = int.Parse(whichAnswer);
             NPC characterFromName = Game1.getCharacterFromName("Pam");
-            if (Game1.player.Money >= Locations[index].TicketPrice && Game1.currentLocation.characters.Contains(characterFromName) && characterFromName.Tile == new Vector2(21, 10))
+
+            ///////NEW//////
+            if (Game1.player.Money >= Locations[index].TicketPrice)
             {
-                Game1.player.Money -= Locations[index].TicketPrice;
-                Game1.player.Halt();
-                Game1.player.freezePause = 700;
-                Game1.warpFarmer(Locations[index].MapName, Locations[index].DestinationX, Locations[index].DestinationY, Locations[index].ArrivalFacing);
+
+                if ((Game1.currentLocation.characters.Contains(characterFromName) && characterFromName.Tile == new Vector2(21, 10)) || Utility.IsPassiveFestivalDay() || Utility.IsHospitalVisitDay("Pam"))
+                {
+                    Game1.player.Money -= Locations[index].TicketPrice;
+                    Game1.player.Halt();
+                    Game1.player.freezePause = 700;
+                    Game1.warpFarmer(Locations[index].MapName, Locations[index].DestinationX, Locations[index].DestinationY, Locations[index].ArrivalFacing);
+                }
+                else
+                {
+                    Game1.drawObjectDialogue(Game1.content.LoadString("Strings\\Locations:BusStop_NoDriver"));
+                }
+
             }
-            else if (Game1.player.Money < Locations[index].TicketPrice)
+            else
+            {
                 Game1.drawObjectDialogue(Game1.content.LoadString("Strings\\Locations:BusStop_NotEnoughMoneyForTicket"));
-              else
-                Game1.player.Money -= Locations[index].TicketPrice;
-                Game1.player.Halt();
-                Game1.player.freezePause = 700;
-                Game1.warpFarmer(Locations[index].MapName, Locations[index].DestinationX, Locations[index].DestinationY, Locations[index].ArrivalFacing);
+            }
+
         }
     }
 }
